@@ -1,130 +1,80 @@
+if(process.env.NODE_ENV !== 'production'){
+    require('dotenv').config()
+}
+
 const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-require('dotenv/config');
 
-/*  
-var main= require('./router/main');
-//const mongoClient = require('mongodb').MongoClient
-//const url = process.env.MONGO_DB
+const bcrypt = require('bcrypt');
+const passport = require('passport')
+const flash = require('express-flash')
+const session = require('express-session')
+require("dotenv").config();
 
-app.use('/main', main);
-*/
+const User = require('./models/User');
 
-/*
-app.use('/posts ', () => {
-    console.log('Middleware running');
-}); 
-*/
+app.use( bodyParser.json());
+app.use(express.urlencoded({extended: false })); //post에서 입력값이 res를 통해서 전달되도록 함 필수인지 모름
+app.use(flash())
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false
+}))
+app.use(passport.initialize())
+app.use(passport.session())
 
-// app.use(express.json())
-app.use( bodyParser.json() );
 
-mongoose.connect('proceess.env.DB_CONNECTION',{ useNewUrlParser: true }, ()=>
-    console.log('connected')
+mongoose.connect(process.env.DB_CONNECTION, { useNewUrlParser: true,useUnifiedTopology: true } , ()=>
+    console.log('connected to db')
 );
 
-const postRoute  = require('./routes/posts')
-app.use('/posts', postRoute);
  
-
 app.get('/',(req,res)=>{
     res.send('we are at start');
 });
 
+// 라우터
+const mainRoute  = require('./routes/main');
+app.use('/main', mainRoute);
+
+var registerRoute= require('./routes/register');
+app.use('/register', registerRoute);
+
+const postRoute  = require('./routes/posts');
+app.use('/posts', postRoute);
+
+const loginRoute  = require('./routes/login');
+app.use('/login', loginRoute);
+
+
+//passport
+const initializePassport = require('./passport-config')
+initializePassport(passport, 
+    email => User.find( {"email": email} ),
+    id => User.find({"id": id})
+)
 
 
 /*
-app.use(session({
-    secret :'asdjha!@#@#$dd',
-    resave:false,
-    saveUninitialized:true
-    })) 
-
-app.get('/',(req,res)=>{
-    res.redirect('/user/welcome');
-})
-
-
-mongoClient.connect(url, { useUnifiedTopology: true }, (err, db) => {
-    
-    if (err) {
-        console.log("Error while connecting mongo client")
-    } else {
-        console.log(url + "connected");
-        const myDB = db.db('userDB')
-        const collection = myDB.collection('userTable')
-
-        app.post('/signup', (req, res) => {
-            console.log(req.body)
-            const newUser = {
-                id: req.body.id,
-                name: req.body.name,
-                email: req.body.email,
-                password: req.body.pw
-            }
-
-            const query = { email: newUser.email }
-
-            collection.findOne(query, (err, result) => {
-
-                if (result == null) {
-                    collection.insertOne(newUser, (err, result) => {
-                        res.status(200).send()
-                    })
-                } else {
-                    res.status(400).send()
-                }
-
-            })
-
-        })
-
-        app.post('/login', (req, res) => {
-
-            const query = {
-                email: req.body.email, 
-                password: req.body.pw
-            }
-
-            collection.findOne(query, (err, result) => {
-
-                if (result != null) {
-
-                    const objToSend = {
-                        name: result.name,
-                        email: result.email
-                    }
-
-                    res.status(200).send(JSON.stringify(objToSend))
-
-                } else {
-                    res.status(404).send()
-                }
-
-            })
-
-        })
-
-
-
-
-        //
-
-
+function checkAutenticated(req, res, next){
+    if(req.isAutenticated()){
+        return next()
     }
-
-})
+    res.redirect('/login')
+}
+function checkNotAutenticated(req, res, next){
+    if(req.isAutenticated()){
+        res.redirect('/')
+    }
+    next()
+}
 */
+
+
+
 app.listen(3000, () => {
     console.log("Listening on port 3000…")
 })
-
-
-
-
-
-//const cookieParser = require('cookie-parser');
-//const session = require('express-session'); //var session = require('express-session');
-//const dotenv = require('dotenv').config()
